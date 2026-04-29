@@ -1,0 +1,16 @@
+{
+  "name": "Soil Health AI",
+  "short_name": "Soil Health",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A423D",
+  "theme_color": "#1A423D",
+  "icons": [
+    {
+      "src": "/static/icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

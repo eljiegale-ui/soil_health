@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Soil AI - Advisory & Monitoring</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#064e3b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/jpeg" href="/static/icon.jpg">
+    <link rel="apple-touch-icon" href="/static/icon.jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        #guide-overlay { transition: opacity 0.4s ease, visibility 0.4s; }
+        .history-card, .soil-type-card { background: white; border-radius: 20px; padding: 12px; border-left: 6px solid #059669; display: flex; gap: 12px; align-items: center; transition: all 0.2s ease; }
+        .history-thumb { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; background: #eee; flex-shrink: 0; }
+        .delete-btn { padding: 10px; color: #cbd5e1; transition: all 0.2s; border-radius: 12px; }
+        .delete-btn:hover { color: #ef4444; background: #fee2e2; }
+        .btn-hover-effect { transition: all 0.2s ease; }
+        .btn-hover-effect:hover { transform: translateY(-2px); filter: brightness(105%); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .btn-hover-effect:active { transform: translateY(0); }
+        body { overscroll-behavior-y: contain; padding-bottom: 90px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #e2e8f0; z-index: 90; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; font-size: 9px; font-weight: 800; text-transform: uppercase; transition: all 0.2s; flex: 1; border: none; background: none; }
+        .nav-item.active { color: #059669; }
+        .nav-item i { font-size: 18px; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <div id="guide-overlay" class="fixed inset-0 z-[100] bg-emerald-900/95 flex items-center justify-center p-6">
+        <div class="bg-white rounded-[40px] w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="bg-emerald-800 py-8 px-6 text-center">
+                <div class="mb-3 inline-block">
+                    <img src="/static/wally.jpg" alt="Logo" class="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover mx-auto bg-white">
+                </div>
+                <h2 class="text-white font-black text-2xl uppercase italic">Soil Health AI</h2>
+                <p class="text-emerald-100 text-sm">Welcome farmers, hope you doing good!</p>
+            </div>
+            <div class="p-6">
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex items-center gap-4">
+                    <span class="text-3xl animate-pulse">☀️</span>
+                    <p class="text-sm text-amber-900 font-bold leading-tight">IMPORTANT: Take photos in direct sunlight for accurate analysis.</p>
+                </div>
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-start gap-4"><div class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center font-black flex-shrink-0 text-xs">1</div><p class="text-slate-600 text-sm font-medium">Clear away grass or trash from the soil.</p></div>
+                    <div class="flex items-start gap-4"><div class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center font-black flex-shrink-0 text-xs">2</div><p class="text-slate-600 text-sm font-medium">Capture a clear soil photo using the camera.</p></div>
+                    <div class="flex items-start gap-4"><div class="bg-emerald-100 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center font-black flex-shrink-0 text-xs">3</div><p class="text-slate-600 text-sm font-medium">Follow the planting and nutrient advice.</p></div>
+                </div>
+                <button onclick="startApp()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Agree & Start</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-page" class="page">
+        <header class="bg-emerald-900 text-white py-12 px-6 text-center shadow-2xl rounded-b-[40px]">
+            <h1 class="text-4xl font-black italic uppercase">Soil AI</h1>
+            <p class="text-emerald-300 font-bold uppercase text-xs tracking-widest">Farmer Diagnostic Tool AI</p>
+        </header>
+        <main class="max-w-md mx-auto p-6 -mt-10">
+            <div class="bg-white rounded-3xl shadow-xl p-6 flex flex-col gap-4">
+                <button onclick="sc()" class="btn-hover-effect w-full bg-emerald-600 py-4 rounded-2xl font-bold text-white shadow-lg"><i class="fas fa-camera mr-2"></i> Capture Soil</button>
+                <button onclick="document.getElementById('f').click()" class="btn-hover-effect w-full bg-slate-100 py-4 rounded-2xl font-bold text-slate-700"><i class="fas fa-images mr-2"></i> Upload Image</button>
+                <input type="file" id="f" accept="image/*" class="hidden" onchange="pv(event)">
+            </div>
+            <div id="va" class="hidden mt-6 bg-black rounded-[32px] overflow-hidden relative border-4 border-white shadow-2xl">
+                <video id="v" class="w-full h-80 object-cover" autoplay playsinline></video>
+                <img id="ip" class="w-full hidden h-80 object-cover">
+                <button id="cap" onclick="tp()" class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white w-20 h-20 rounded-full border-8 border-emerald-500 active:scale-90 transition"></button>
+            </div>
+            <button id="an" onclick="up()" class="btn-hover-effect hidden w-full mt-6 bg-orange-500 text-white py-6 rounded-3xl font-black text-xl uppercase shadow-lg">Run Analysis</button>
+            <div id="ld" class="hidden text-center py-10 font-bold text-emerald-900 animate-pulse">Scanning Soil...</div>
+            <div class="mt-12">
+                <h3 class="text-slate-900 font-black uppercase text-xs mb-4"><i class="fas fa-history text-emerald-600 mr-2"></i> Recent Scans</h3>
+                <div id="h-list" class="space-y-4"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="soil-page" class="page bg-slate-50 min-h-screen">
+        <header class="bg-emerald-900 text-white py-8 px-6 shadow-lg rounded-b-[40px]">
+            <h1 class="text-2xl font-black italic uppercase text-center">Soil Library</h1>
+        </header>
+        <main class="max-w-md mx-auto p-6 space-y-4">
+            <div class="soil-type-card shadow-sm"><div class="bg-amber-800 text-white w-12 h-12 rounded-xl flex items-center justify-center text-xl">🧱</div><div><h4 class="font-black text-emerald-900 text-sm uppercase">Clay Soil</h4><p class="text-[11px] text-slate-500">Heavy, holds water well but drains slowly. High in nutrients.</p></div></div>
+            <div class="soil-type-card shadow-sm"><div class="bg-yellow-200 text-yellow-800 w-12 h-12 rounded-xl flex items-center justify-center text-xl">🏖️</div><div><h4 class="font-black text-emerald-900 text-sm uppercase">Sandy Soil</h4><p class="text-[11px] text-slate-500">Light and warm. Drains very quickly, but needs more fertilizer.</p></div></div>
+            <div class="soil-type-card shadow-sm"><div class="bg-emerald-700 text-white w-12 h-12 rounded-xl flex items-center justify-center text-xl">🌱</div><div><h4 class="font-black text-emerald-900 text-sm uppercase">Loam Soil</h4><p class="text-[11px] text-slate-500">The best for farming. A perfect mix of sand, silt, and clay.</p></div></div>
+            <div class="soil-type-card shadow-sm"><div class="bg-slate-400 text-white w-12 h-12 rounded-xl flex items-center justify-center text-xl">🪨</div><div><h4 class="font-black text-emerald-900 text-sm uppercase">Silt Soil</h4><p class="text-[11px] text-slate-500">Smooth and fine. Holds moisture well but can be easily compacted.</p></div></div>
+        </main>
+    </div>
+
+    <div id="history-page" class="page bg-slate-50 min-h-screen">
+        <header class="bg-emerald-900 text-white py-8 px-6 shadow-lg rounded-b-[40px] flex justify-between items-center">
+            <h1 class="text-2xl font-black italic uppercase">Histories</h1>
+            <button onclick="clearAllHistory()" class="bg-red-500/20 text-red-200 text-[10px] px-3 py-1 rounded-full font-bold uppercase border border-red-500/30">Clear All</button>
+        </header>
+        <main class="max-w-md mx-auto p-6"><div id="full-h-list" class="space-y-4"></div></main>
+    </div>
+
+    <div id="result-page" class="page bg-slate-50 min-h-screen">
+        <div id="rs" class="bg-white rounded-b-[40px] shadow-2xl overflow-hidden pb-10">
+            <div id="rh" class="py-16 text-white text-center font-black text-4xl italic px-6"></div>
+            <div class="max-w-md mx-auto p-8">
+                <div id="rb" class="mb-8 p-6 rounded-3xl flex items-center gap-4 text-white shadow-lg">
+                    <div id="ri" class="text-4xl"></div>
+                    <div><p class="text-[10px] uppercase font-bold opacity-80">Readiness</p><p id="rt" class="text-2xl font-black"></p></div>
+                </div>
+                <div id="al" class="space-y-3 mb-8"></div>
+
+                <div class="flex flex-col gap-3">
+                    <button onclick="downloadReport()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-sm shadow-lg">
+                        <i class="fas fa-file-download mr-2"></i> Save to Device
+                    </button>
+                    <button onclick="resetApp()" class="w-full bg-emerald-100 text-emerald-800 py-4 rounded-2xl font-black uppercase text-sm">
+                        New Scan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button onclick="navTo('main-page')" id="nav-home" class="nav-item active"><i class="fas fa-home"></i><span>Home</span></button>
+        <button onclick="navTo('soil-page')" id="nav-soil" class="nav-item"><i class="fas fa-seedling"></i><span>Soil Types</span></button>
+        <button onclick="sc()" class="nav-item"><i class="fas fa-camera"></i><span>Capture</span></button>
+        <button onclick="navTo('history-page')" id="nav-history" class="nav-item"><i class="fas fa-history"></i><span>History</span></button>
+    </nav>
+
+    <canvas id="c" class="hidden"></canvas>
+
+    <script>
+        let b = null, lastThumb = null, currentResult = null;
+        const v = document.getElementById('v'), ip = document.getElementById('ip'), an = document.getElementById('an'), ld = document.getElementById('ld'), va = document.getElementById('va');
+
+        function navTo(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(pageId === 'main-page') document.getElementById('nav-home').classList.add('active');
+            if(pageId === 'soil-page') document.getElementById('nav-soil').classList.add('active');
+            if(pageId === 'history-page') document.getElementById('nav-history').classList.add('active');
+            if(pageId !== 'main-page' && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+            window.scrollTo(0,0);
+        }
+
+        function startApp() { document.getElementById('guide-overlay').style.display = 'none'; navTo('main-page'); renderHistory(); }
+        function resetApp() { navTo('main-page'); va.classList.add('hidden'); an.classList.add('hidden'); b = null; currentResult = null; }
+
+        async function sc() {
+            navTo('main-page');
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                v.srcObject = s; va.classList.remove('hidden'); v.classList.remove('hidden'); ip.classList.add('hidden');
+                document.getElementById('cap').classList.remove('hidden'); an.classList.add('hidden');
+            } catch (err) { alert("Camera access denied."); }
+        }
+
+        function tp() {
+            const c = document.getElementById('c');
+            c.width = 120; c.height = 120;
+            c.getContext('2d').drawImage(v, 0, 0, 120, 120);
+            lastThumb = c.toDataURL('image/jpeg', 0.5);
+            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            c.toBlob(bl => {
+                b = bl; ip.src = URL.createObjectURL(bl);
+                ip.classList.remove('hidden'); v.classList.add('hidden');
+                document.getElementById('cap').classList.add('hidden'); an.classList.remove('hidden');
+            }, 'image/jpeg');
+        }
+
+        function pv(e) {
+            b = e.target.files[0]; if (!b) return;
+            const r = new FileReader();
+            r.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.getElementById('c');
+                    c.width = 120; c.height = 120;
+                    c.getContext('2d').drawImage(img, 0, 0, 120, 120);
+                    lastThumb = c.toDataURL('image/jpeg', 0.5);
+                    ip.src = ev.target.result; va.classList.remove('hidden'); ip.classList.remove('hidden'); v.classList.add('hidden');
+                    document.getElementById('cap').classList.add('hidden'); an.classList.remove('hidden');
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(b);
+        }
+
+        async function up() {
+            an.classList.add('hidden'); ld.classList.remove('hidden');
+            const fd = new FormData(); fd.append('file', b);
+            try {
+                const r = await fetch('/predict', { method: 'POST', body: fd });
+                const d = await r.json();
+                if(d.success) {
+                    d.img = lastThumb;
+                    const now = new Date();
+                    d.timestamp = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+                                  ' • ' +
+                                  now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    saveToLocal(d);
+                    displayResult(d);
+                }
+                else { ld.classList.add('hidden'); alert(d.message); resetApp(); }
+            } catch(e) { ld.classList.add('hidden'); alert("Server Error."); resetApp(); }
+        }
+
+        function displayResult(d) {
+            currentResult = d; // CRITICAL: Store data for download
+            ld.classList.add('hidden');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('result-page').classList.add('active');
+            let cl = d.status === 'healthy' ? 'bg-emerald-600' : (d.status === 'warning' ? 'bg-orange-500' : 'bg-red-500');
+            document.getElementById('rh').innerText = d.prediction;
+            document.getElementById('rh').className = `py-16 text-white text-center font-black text-4xl italic px-6 ${cl}`;
+            document.getElementById('rb').className = `mb-8 p-6 rounded-3xl flex items-center gap-4 text-white shadow-lg ${cl}`;
+            document.getElementById('ri').innerText = d.status === 'healthy' ? '🚜' : (d.status === 'warning' ? '🛠️' : '🚫');
+            document.getElementById('rt').innerText = d.readiness;
+            const l = document.getElementById('al');
+            l.innerHTML = `<p class='text-sm text-slate-600 mb-6 italic'>${d.expert_analysis}</p>`;
+            d.recommended_actions.forEach(act => {
+                l.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl text-sm font-bold text-slate-700 border-b-2 border-slate-100 flex gap-3"><i class="fas fa-check-circle text-emerald-600 mt-1"></i> ${act}</div>`;
+            });
+        }
+
+        function downloadReport() {
+            if (!currentResult) return;
+            const text = `SOIL HEALTH REPORT\nGenerated: ${currentResult.timestamp}\n------------------\nType: ${currentResult.prediction}\nReadiness: ${currentResult.readiness}\n\nAnalysis:\n${currentResult.expert_analysis}\n\nActions:\n${currentResult.recommended_actions.join('\n')}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Soil_Report_${Date.now()}.txt`;
+            a.click();
+        }
+
+        function saveToLocal(data) {
+            let h = JSON.parse(localStorage.getItem('soil_history') || '[]');
+            h.unshift(data);
+            localStorage.setItem('soil_history', JSON.stringify(h));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const h = JSON.parse(localStorage.getItem('soil_history') || '[]');
+            const homeList = document.getElementById('h-list'), fullList = document.getElementById('full-h-list');
+            const gen = (item, i) => `
+                <div class="history-card shadow-sm">
+                    <div class="flex flex-grow items-center gap-3 overflow-hidden" onclick="viewHistory(${i})">
+                        <img src="${item.img}" class="history-thumb">
+                        <div class="flex-grow">
+                            <p class="text-[9px] font-black text-slate-400 uppercase">${item.timestamp}</p>
+                            <p class="font-black text-emerald-800 text-xs uppercase italic truncate">${item.prediction}</p>
+                            <p class="text-[10px] text-slate-500 font-bold">${item.readiness}</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteHistoryItem(event, ${i})" class="delete-btn"><i class="fas fa-trash-can"></i></button>
+                </div>`;
+            const empty = `<p class="text-slate-400 text-xs italic text-center py-10">No scans found.</p>`;
+            if(homeList) homeList.innerHTML = h.length === 0 ? empty : h.slice(0, 5).map((item, i) => gen(item, i)).join('');
+            if(fullList) fullList.innerHTML = h.length === 0 ? empty : h.map((item, i) => gen(item, i)).join('');
+        }
+
+        function viewHistory(i) {
+            const h = JSON.parse(localStorage.getItem('soil_history') || '[]');
+            displayResult(h[i]); // This now correctly sets currentResult for download
+        }
+
+        function deleteHistoryItem(e, i) { e.stopPropagation(); if(confirm("Delete this result?")) { let h = JSON.parse(localStorage.getItem('soil_history')||'[]'); h.splice(i,1); localStorage.setItem('soil_history',JSON.stringify(h)); renderHistory(); } }
+        function clearAllHistory() { if(confirm("Permanently delete ALL history?")) { localStorage.removeItem('soil_history'); renderHistory(); } }
+
+        window.onload = renderHistory;
+    </script>
+</body>
+</html>
